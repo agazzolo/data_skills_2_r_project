@@ -39,7 +39,7 @@ It is required that you use GitHub, and I will use your past commits to understa
 
 Your final repository must contain the following: 
 1. Your R code and commit history
-2. The initial, *unmodified* dataframes you download, unless they are large, in which case they should be hosted Drive or Dropbox with a link provided
+2. The initial, *unmodified* dataframes you download, unless they are large, in which case they should be hosted on Drive or Dropbox with a link provided
 3. Saved .png versions of your static plots
 4. The final versions of the dataframe(s) you built (with the same caveat as in 2)
 5. Your writeup (Word or markdown are both fine)
