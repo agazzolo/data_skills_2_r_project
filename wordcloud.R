@@ -51,13 +51,27 @@ no_sw_freq <- no_sw_all_b %>%
          freq = "n") %>%
   arrange(desc(freq))
 
-ui <- fluidPage(
-  selectInput(inputId = "q",
-              label = "Choose a question",
-              choices = no_sw_all_b$question),
-  wordcloud2Output("ques"),
-  wordcloud2Output("all")
-)
+ui <- 
+  
+  navbarPage("Research",
+    
+    headerPanel(title = "Neeti's Work"),          
+    tabPanel("Home"),
+                        
+    tabPanel("Peabody",
+             selectInput(inputId = "q",
+                         label = "Choose a question",
+                         choices = no_sw_all_b$question),
+              wordcloud2Output("ques"),
+              wordcloud2Output("all"),
+              ),
+    
+    tabPanel("Lincoln Park Zoo")
+        
+                
+           
+)  
+# multiphttps://community.rstudio.com/t/shiny-app-composed-of-many-many-pages/7698  
 
 server <- function(input, output) {
   
