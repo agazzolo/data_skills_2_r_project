@@ -58,7 +58,7 @@ etana %>%
   geom_point() +
   stat_smooth(method = "lm")
 
-df %>%
+sabrena %>%
   ggplot(aes(x = `Sample date`, y = `CC (ng/g)`, color = construction_status)) +
   geom_point() +
   stat_smooth(method = "lm")
@@ -77,7 +77,7 @@ df %>%
   ggplot(aes(x = `CC (ng/g)`)) +
   geom_histogram(bins = 50)
 
-df %>%
+sabrena %>%
   filter(construction_status == "Demo") %>%
   ggplot(aes(x = `CC (ng/g)`)) +
   geom_histogram(bins = 30)
