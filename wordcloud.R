@@ -114,13 +114,14 @@ sentiments_all <- evaluations %>%
   filter(!is.na(sentiment)) %>%
   ggplot(aes(sentiment)) +
   geom_histogram(stat = "count", fill = c("firebrick1", "green2")) +
-  labs(title = "Seniment Analysis: Evaluations A and B (BING)", 
+  labs(title = "Sentiment Analysis: Evaluations A and B (BING)", 
        x = "Sentiment Classification", 
        y = "Word Count") +
   scale_x_discrete(labels = c("Negative", "Positive")) +
   theme_clean() +
   theme(axis.title.x = element_text(size = 11, face = "bold"),
         axis.title.y = element_text(size = 11, face = "bold"))
+
 
 ###################################################################################################
 # Read Giraffe Data
@@ -168,7 +169,6 @@ both_giraffes <- giraffes %>%
   theme_clean() +
   theme(axis.title.x = element_text(size = 11, face = "bold"),
         axis.title.y = element_text(size = 11, face = "bold"))
-
 #https://stackoverflow.com/questions/5388832/how-to-get-a-vertical-geom-vline-to-an-x-axis-of-class-date
 
 # lm by construction status
@@ -287,7 +287,7 @@ server <- function(input, output) {
              question == input$qq) %>%
       ggplot(aes(sentiment)) +
       geom_histogram(stat = "count", fill = c("firebrick1", "green2")) +
-      labs(title = "Seniment Analysis: Individual Questions (BING)", 
+      labs(title = "Sentiment Analysis: Individual Questions (BING)", 
            x = "Sentiment Classification", 
            y = "Word Count") +
       scale_x_discrete(labels = c("Negative", "Positive")) +
