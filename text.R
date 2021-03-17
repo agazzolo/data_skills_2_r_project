@@ -73,7 +73,8 @@ all_b <- unnest_tokens(all_cols, word_tokens, text, token = "words")
 # Wordcloud Evaluation A and B
 ###################################################################################################
 
-merged <- full_join(all_a, all_b)
+merged <- full_join(all_a, all_b) %>%
+  left_join(get_sentiments("bing"), by = c("word_tokens" = "word"))
 
 evaluations <- anti_join(merged, stop_words, by = c("word_tokens" = "word")) %>%
   filter(word_tokens != "na")
@@ -111,6 +112,30 @@ eval_a_questions <- evaluations %>%
 eval_b_questions <- evaluations %>%
   filter(evaluation == "Evaluation B") %>%
   distinct(question)
+
+###################################################################################################
+# Sentiment Analysis Evaluation A and B
+###################################################################################################
+
+ggplot(data = filter(merged, !is.na(sentiment))) +
+  geom_histogram(aes(sentiment), stat = "count") +
+  scale_x_discrete(guide = guide_axis(angle = 45)) +
+  labs(title = "Evaluation A and B Responses BING Sentiments")
+
+sentiment_all <- evaluations %>%
+  filter(!is.na(sentiment)) %>%
+  ggplot(aes(sentiment)) +
+    geom_histogram(stat = "count", fill = c("firebrick1", "green2")) +
+    labs(title = "Seniment Analysis: Evaluations A and B (BING)", 
+         x = "Sentiment Classification", 
+         y = "Word Count") +
+    scale_x_discrete(labels = c("Negative", "Positive")) +
+    theme_clean() +
+    theme(axis.title.x = element_text(size = 11, face = "bold"),
+          axis.title.y = element_text(size = 11, face = "bold"))
+
+print(sentiment_all)
+
 ###################################################################################################
 # split evaluation b into 2 dataframes of survey results and survey data analysis
 evaluation_b_poll <- slice(evaluation_b, (15:23))
@@ -185,91 +210,3 @@ wordcloud2(q1)
 
 
 
-
-
-
-path <- "C:/Users/balas/OneDrive/Documents/Harris/Data_and_Programming_II/Homework/final_project/"
-
-evaluation_b <- read_excel(paste0(path, "_Evaluation A and B Text Responses ONLY.xlsx"), 
-                           sheet = "Evalution B Text Responses ONLY")
-
-# rename columns adding question from row 1 and then delete row 1
-evaluation_b <- evaluation_b %>% 
-  rename_all(funs(str_c(colnames(evaluation_b), evaluation_b[1,], sep = ": "))) %>%
-  slice(-c(1))
-
-# split evaluation b into 2 dataframes of survey results and survey data analysis
-evaluation_b_poll <- slice(evaluation_b, (15:23))
-evaluation_b_responses <- slice(evaluation_b, (1:13))
-# https://dplyr.tidyverse.org/reference/slice.html  
-
-# unnest all columns
-all_cols <- list(ncol(evaluation_b_responses))
-for (i in seq_along(evaluation_b_responses)) {
-  all_cols[[i]] <- paste(unlist(evaluation_b_responses[[i]]), collapse = " ")
-}
-
-all_cols <- tibble(text = all_cols)
-
-all_cols <- all_cols %>%
-  mutate(question = c(1, 2, 3, 4, 5, 6, 7, 8, 9))
-
-all_b <- unnest_tokens(all_cols, word_tokens, text, token = "words")
-# wordcloud
-
-no_sw_all_b <- anti_join(all_b, stop_words, by = c("word_tokens" = "word"))
-
-all_b_freq <- no_sw_all_b %>%
-  group_by(question) %>%
-  count(word_tokens)
-
-no_sw_freq <- no_sw_all_b %>%
-  count(word_tokens) %>%
-  rename(word = "word_tokens",
-         freq = "n") %>%
-  arrange(desc(freq))
-
-ui <- 
-  
-  navbarPage("Research",
-             
-             headerPanel(title = "Neeti's Work"),          
-             tabPanel("Home"),
-             
-             tabPanel("Peabody",
-                      selectInput(inputId = "q",
-                                  label = "Choose a question",
-                                  choices = no_sw_all_b$question),
-                      wordcloud2Output("ques"),
-                      wordcloud2Output("all"),
-             ),
-             
-             tabPanel("Lincoln Park Zoo")
-             
-             
-             
-  )  
-# multiphttps://community.rstudio.com/t/shiny-app-composed-of-many-many-pages/7698  
-
-server <- function(input, output) {
-  
-  filtered <- reactive({
-    wrdcloud <- no_sw_all_b %>% 
-      filter(question == input$q) %>%
-      count(word_tokens) %>%
-      rename(word = "word_tokens",
-             freq = "n") %>%
-      arrange(desc(freq))
-  })  
-  
-  output$ques <- renderWordcloud2({
-    wordcloud2(filtered())
-  })  
-  #https://cran.r-project.org/web/packages/wordcloud2/vignettes/wordcloud.html
-  
-  output$all <- renderWordcloud2({
-    wordcloud2(no_sw_freq)
-  })
-}
-
-#shinyApp(ui = ui, server = server)

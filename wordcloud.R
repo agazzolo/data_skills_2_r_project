@@ -76,7 +76,8 @@ all_b <- unnest_tokens(all_cols, word_tokens, text, token = "words")
 # Wordcloud Evaluation A and B
 ###################################################################################################
 
-merged <- full_join(all_a, all_b)
+merged <- full_join(all_a, all_b) %>%
+  left_join(get_sentiments("bing"), by = c("word_tokens" = "word"))
 
 evaluations <- anti_join(merged, stop_words, by = c("word_tokens" = "word")) %>%
   filter(word_tokens != "na")
@@ -105,36 +106,163 @@ eval_b_questions <- evaluations %>%
   filter(evaluation == "Evaluation B") %>%
   distinct(question)
 
+###################################################################################################
+# Sentiment Analysis Evaluation A and B
+###################################################################################################
+
+sentiments_all <- evaluations %>%
+  filter(!is.na(sentiment)) %>%
+  ggplot(aes(sentiment)) +
+  geom_histogram(stat = "count", fill = c("firebrick1", "green2")) +
+  labs(title = "Seniment Analysis: Evaluations A and B (BING)", 
+       x = "Sentiment Classification", 
+       y = "Word Count") +
+  scale_x_discrete(labels = c("Negative", "Positive")) +
+  theme_clean() +
+  theme(axis.title.x = element_text(size = 11, face = "bold"),
+        axis.title.y = element_text(size = 11, face = "bold"))
+
+###################################################################################################
+# Read Giraffe Data
+###################################################################################################
+
+etana <- read_excel(paste0(path, "Etana EIA Results - Updated.xlsx"), skip = 2)
+
+etana <- etana %>%
+  mutate(construction_status = case_when(`Sample date` > "2014-10-16" & `Sample date` < "2014-12-21" ~ "Demo",
+                                         `Sample date` > "2014-12-21" & `Sample date` < "2015-04-06" ~ "No Construction",
+                                         `Sample date` > "2015-04-05" & `Sample date` < "2015-11-30" ~ "Active Construction"),
+         name = "Etana",
+         construction_dummy = ifelse(construction_status == "Demo" | construction_status == "Active Construction", 1, 0),
+         `Sample date` = as.Date(`Sample date`)) %>%
+  select(everything(), -`Sample #`)
+
+sabrena <- read_excel(paste0(path, "Sabrena EIA Results - Updated.xlsx"), skip = 2)
+
+sabrena <- sabrena %>%
+  mutate(construction_status = case_when(`Sample date` > "2014-10-16" & `Sample date` < "2014-12-21" ~ "Demo",
+                                         `Sample date` > "2014-12-21" & `Sample date` < "2015-04-06" ~ "No Construction",
+                                         `Sample date` > "2015-04-05" & `Sample date` < "2015-11-30" ~ "Active Construction"),
+         name = "Sabrena",
+         construction_dummy = ifelse(construction_status == "Demo" | construction_status == "Active Construction", 1, 0),
+         `Sample date` = as.Date(`Sample date`)) %>%
+  select(everything(), -`Sample #`)
+
+giraffes <- full_join(sabrena, etana, by = c(colnames(etana))) 
+
+###################################################################################################
+# Giraffe Graphs
+###################################################################################################
+
+both_giraffes <- giraffes %>%
+  ggplot(aes(x = `Sample date`, y = `CC (pg/well)`, color = name)) +
+  geom_point() +
+  geom_line() +
+  scale_color_manual(values = c("darkgreen", "orangered")) +
+  geom_vline(xintercept = as.numeric(as.Date(c("2014-12-21", "2015-04-06"))), linetype = "dashed", 
+             color = "black", size = 1.5) +
+  geom_text(x = as.numeric(as.Date("2014-11-11")), y = 225, label = "Demo", show.legend = FALSE, color = "blue") +
+  geom_text(x = as.numeric(as.Date("2015-02-11")), y = 225, label = "No Construction", show.legend = FALSE, color = "blue") +
+  geom_text(x = as.numeric(as.Date("2015-08-11")), y = 225, label = "Active Construction", show.legend = FALSE, color = "blue") +
+  labs(title = "Cortisol Metabolite Levels During Construction Phases", x = "Date of Sample Taken", color = "Giraffe") +
+  theme_clean() +
+  theme(axis.title.x = element_text(size = 11, face = "bold"),
+        axis.title.y = element_text(size = 11, face = "bold"))
+
+#https://stackoverflow.com/questions/5388832/how-to-get-a-vertical-geom-vline-to-an-x-axis-of-class-date
+
+# lm by construction status
+etana_graph <- etana %>%
+    ggplot(aes(x = `Sample date`, y = `CC (ng/g)`, color = construction_status)) +
+    geom_point() +
+    stat_smooth(method = "lm") +
+    scale_color_manual(values = c("gold3", "midnightblue", "firebrick3")) +
+    geom_vline(xintercept = as.numeric(as.Date(c("2014-12-21", "2015-04-06"))), linetype = "dashed", 
+               color = "black", size = 1.5) +
+    geom_text(x = as.numeric(as.Date("2014-11-11")), y = 250, label = "Demo", show.legend = FALSE, color = "blue") +
+    geom_text(x = as.numeric(as.Date("2015-02-11")), y = 250, label = "No Construction", show.legend = FALSE, color = "blue") +
+    geom_text(x = as.numeric(as.Date("2015-08-11")), y = 250, label = "Active Construction", show.legend = FALSE, color = "blue") +
+    labs(title = "Etana: Cortisol Metabolite Levels with Linear Regression Line for each Construction Phase", x = "Date of Sample Taken", color = "Construction Status") +
+    theme_clean() +
+    theme(axis.title.x = element_text(size = 11, face = "bold"),
+          axis.title.y = element_text(size = 11, face = "bold"))
+
+  
+sabrena_graph <- sabrena %>%
+    ggplot(aes(x = `Sample date`, y = `CC (ng/g)`, color = construction_status)) +
+    geom_point() +
+    stat_smooth(method = "lm") +
+    scale_color_manual(values = c("gold3", "midnightblue", "firebrick3")) +
+    geom_vline(xintercept = as.numeric(as.Date(c("2014-12-21", "2015-04-06"))), linetype = "dashed", 
+               color = "black", size = 1.5) +
+    geom_text(x = as.numeric(as.Date("2014-11-11")), y = 700, label = "Demo", show.legend = FALSE, color = "blue") +
+    geom_text(x = as.numeric(as.Date("2015-02-11")), y = 700, label = "No Construction", show.legend = FALSE, color = "blue") +
+    geom_text(x = as.numeric(as.Date("2015-08-11")), y = 700, label = "Active Construction", show.legend = FALSE, color = "blue") +
+    labs(title = "Sabrena: Cortisol Metabolite Levels with Linear Regression Line for each Construction Phase", x = "Date of Sample Taken", color = "Construction Status") +
+    theme_clean() +
+    theme(axis.title.x = element_text(size = 11, face = "bold"),
+          axis.title.y = element_text(size = 11, face = "bold"))
+
+
 ui <- 
   
-  navbarPage("Research",
+  navbarPage("Neeti's Research Projects",
     
-    #titlePanel(title = "Neeti's Work"),         
-    
-    tabPanel("Home"),
-                        
+    tabPanel("Home",
+             fluidRow(column(width = 12, 
+                             tags$h1("Neeti's Research Projects", align = "center"),
+                             tags$hr()),
+                      ),
+             fluidRow(column(width = 12, 
+                             tags$h3("Peabody", align = "center"),
+                             ),
+                      ), 
+             fluidRow(column(width = 12, 
+                             tags$p("It is required that you use GitHub, and I will use your past commits to understand your thought process for partial credit, and to monitor group participation.  You will not get full credit if your repository does not show multiple commits as you build your project, especially for groups.  Expectations for the scope of the project will be higher for groups than for individuals, and the division of labor will be up to each group.  Note again that I will be using your GitHub commit history in grading, so while I will lean toward giving the same grade to everyone in a group, it is possible that group members will recieve different grades.")),
+                      ),
+             fluidRow(column(width = 12, 
+                             tags$h3("Lincoln Park Zoo", align = "center"),
+                             ),
+                        ), 
+             fluidRow(column(width = 12, 
+                             tags$p("It is required that you use GitHub, and I will use your past commits to understand your thought process for partial credit, and to monitor group participation.  You will not get full credit if your repository does not show multiple commits as you build your project, especially for groups.  Expectations for the scope of the project will be higher for groups than for individuals, and the division of labor will be up to each group.  Note again that I will be using your GitHub commit history in grading, so while I will lean toward giving the same grade to everyone in a group, it is possible that group members will recieve different grades.")),
+                      ),
+             ),
     tabPanel("Peabody",
+             fluidRow(plotlyOutput("sent")),
+             fluidRow(selectInput(inputId = "qq",
+                                  label = "Choose a question",
+                                  list(
+                                    "Evaluation A" = eval_a_questions$question,
+                                    "Evaluation B" = eval_b_questions$question))
+                      ),
+             fluidRow(plotlyOutput("sent2")),
              fluidRow(column(width = 12, 
                              tags$h2("Word Cloud: Evaluations A and B Combined", align = "center"),
-                             tags$hr()
-                             )
+                             tags$hr()),
                       ),
-             fluidRow(wordcloud2Output("all")), 
+             fluidRow(wordcloud2Output("first")), 
              fluidRow(column(width = 12,
-                             tags$h2("Word Cloud: Individual Questions", align = "center")
-                             )
+                             tags$h2("Word Cloud: Individual Questions", align = "center"))
                       ),
              fluidRow(selectInput(inputId = "q",
                          label = "Choose a question",
                          list(
                            "Evaluation A" = eval_a_questions$question,
-                           "Evaluation B" = eval_b_questions$question)
-                         )
+                           "Evaluation B" = eval_b_questions$question))
                       ),
              fluidRow(wordcloud2Output("ques")),
-              ),
+             ),
     
-    tabPanel("Lincoln Park Zoo")
+    tabPanel("Lincoln Park Zoo",
+             fluidRow(column(width = 12, 
+                             tags$h1("Giraffe Data", align = "center"),
+                             tags$hr())
+                      ),
+             fluidRow(plotlyOutput("both")),
+             fluidRow(plotlyOutput("etana")),
+             fluidRow(plotlyOutput("sabrena"))
+             )
         
                 
            
@@ -151,16 +279,53 @@ server <- function(input, output) {
       rename(word = "word_tokens",
              freq = "n") %>%
       arrange(desc(freq))
-  })  
+  })
   
-  output$all <- renderWordcloud2({
+  evaluations_filter <- reactive({
+    evaluations %>%
+      filter(!is.na(sentiment),
+             question == input$qq) %>%
+      ggplot(aes(sentiment)) +
+      geom_histogram(stat = "count", fill = c("firebrick1", "green2")) +
+      labs(title = "Seniment Analysis: Individual Questions (BING)", 
+           x = "Sentiment Classification", 
+           y = "Word Count") +
+      scale_x_discrete(labels = c("Negative", "Positive")) +
+      theme_clean() +
+      theme(axis.title.x = element_text(size = 11, face = "bold"),
+            axis.title.y = element_text(size = 11, face = "bold"))
+  })
+  
+  output$sent <- renderPlotly({
+    ggplotly(sentiments_all)
+  })
+  
+  output$sent2 <- renderPlotly({
+    ggplotly(evaluations_filter())
+  })
+  
+  output$first <- renderWordcloud2({
     wordcloud2(evaluations_count)
   })
+  
+  
   
   output$ques <- renderWordcloud2({
     wordcloud2(filtered())
   })  
   #https://cran.r-project.org/web/packages/wordcloud2/vignettes/wordcloud.html
+  
+  output$both <- renderPlotly({
+    ggplotly(both_giraffes)
+  })
+  
+  output$etana <- renderPlotly({
+    ggplotly(etana_graph)
+  })
+  
+  output$sabrena <- renderPlotly({
+    ggplotly(sabrena_graph)
+  })
   
 }
 
