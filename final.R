@@ -2,6 +2,12 @@
 # SET UP
 ###################################################################################################
 
+#Grading comments:
+# - Good use of tidyverse style and dplyr
+# - Nice functions for generalization
+# - I like your ggplot work
+# - Good descriptive comments
+
 path <- "C:/Users/balas/OneDrive/Documents/Harris/Data_and_Programming_II/Homework/final_project/data_skills_2_r_project/"
 
 #libraries that may need to be installed
