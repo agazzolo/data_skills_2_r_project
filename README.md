@@ -41,7 +41,7 @@ Your final repository must contain the following:
 1. Your R code and commit history
 2. A folder named "data" that contains the initial, *unmodified* dataframes you download, (unless they are large, in which case they should be hosted on Drive or Dropbox with a link provided), and the final versions of the dataframe(s) you built
 4. A folder named "images" that contains saved .png versions of your static plots
-6. Your writeup in markdown or pdf format
+6. Your writeup in markdown format, renamed as "README.md" (you can delete or rename this file)
 
 ### Suggestions and Tips
  * I encourage you to create a project on a subject that is relevant to your interests, and other Harris classes.  If your research idea is a much larger project, think of how you can develop a basic framework for it using this project, which can then later be expanded into a proper research project.
