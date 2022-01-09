@@ -22,7 +22,7 @@ From that data, you will create a minimum of two static plots using ggplot, and 
 
   3. Text processing
 
-You will now introduce some form of text analysis, similar to that of homework 3.  While it should relate to your broader question, his may be distinct data from what you created in part 1, and the results of it may be used in your plotting or analysis.
+You will now introduce some form of text analysis, similar to that of homework 3.  While it should relate to your broader question, this may be distinct data from what you created in part 1, and the results of it may be used in your plotting or analysis.
 
   4. Analysis
   
