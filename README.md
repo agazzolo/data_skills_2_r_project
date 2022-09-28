@@ -52,3 +52,4 @@ Your final repository must contain the following:
  * Effort put into organizing your code and making it readable, by, for example, following the Tidyverse Style Guide, and good usage of diplyr, functions, variable names, and comments will be rewarded.
  * Similarly, your GitHub repo should be organized - do not leave useless files there (e.g. DS_store files), and keep things in folders
  * The entire point of reproducible research is to make it possible for others (and for a future you who has had time to forget what you did and why) to understand, replicate, and modify your work.  Keeping this in mind as you work will be good for your grade, and helpful to you in the future if you expand on the project.
+ * Free shinyapps.io pages will run slowly, paricularly if your data is large.  Keep this in mind when planning your Shiny app, especially if you have large shape files.
