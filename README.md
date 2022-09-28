@@ -14,7 +14,7 @@ research is ancillary to the quality of your programming.  As a baseline your pr
 
   1. Data wrangling
   
-You must use a minimum of three datasets, at least one of which should be retrieved automatically from the web using APIs or web scraping.  All processing of the data should be handled by your code, including all merging and reshaping.  This is where you can showcase your abilities practiced in homework 1.
+You must use a minimum of three datasets, at least one of which should be retrieved automatically from the web using APIs or web scraping.  All processing of the data should be handled by your code, including all merging and reshaping.  Any automatic data retrieval must have an option to toggle accessing the web off if the data is already downloaded.  This is where you can showcase your abilities practiced in homework 1.
 
   2. Plotting
   
