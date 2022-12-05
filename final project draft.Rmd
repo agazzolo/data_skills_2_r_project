@@ -1,0 +1,98 @@
+---
+title: "final project draft"
+author: "Alex Gazzolo"
+date: "12/2/2022"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(tidyverse)
+library(lubridate)
+library(rvest)
+library(tidycensus)
+```
+
+Data
+```{r}
+# code sources: for splitting date column: https://stackoverflow.com/questions/4078502/split-date-data-m-d-y-into-3-separate-columns
+adopt <- read_csv("sac_aggregate_dataset_2019_2021.csv")
+covid <- read_csv("us-states-new.csv")
+covid$date <- as.Date(covid$date)
+covid <- covid %>% mutate(
+                 year = as.numeric(format(date, format = "%Y")),
+                 month = as.numeric(format(date, format = "%m")),
+                 day = as.numeric(format(date, format = "%d")))
+covid_yr <- covid %>% group_by(state, year) %>% summarise(cases = sum(cases))
+url <- "https://en.wikipedia.org/wiki/U.S._state_and_local_government_responses_to_the_COVID-19_pandemic"
+request <- read_html(url)
+table <- html_table(request, fill = TRUE)
+View(table[[3]])
+lockdowns <- table[[3]]
+colnames(lockdowns) <- c('State_del',
+                         'State',
+                         'Emergency_Declared', 
+                         'Stay_At_Home_Ordered', 
+                         'Stay_At_Home_Lifted',
+                         'Masks_Required',
+                         'Gatherings',
+                         'Travel_Restrictions',
+                         'Closures_School',
+                         'Closures_Daycare',
+                         'Closures_Restaurants',
+                         'Closures_Retail',
+                         'Sources')
+lockdowns <- lockdowns %>% select(!c(State_del, 
+                        Gatherings, 
+                        Travel_Restrictions, 
+                        Closures_School,
+                        Closures_Daycare,
+                        Closures_Restaurants,
+                        Closures_Retail,
+                        Sources))
+lockdowns <- lockdowns %>% mutate(SAH = ifelse(Stay_At_Home_Ordered == 'No', 0, 1))
+lockdowns = lockdowns[-1,]
+lockdowns <- lockdowns %>% separate(Stay_At_Home_Ordered, c("Start_Month", "Start_Day")) 
+lockdowns <- lockdowns %>% separate(Stay_At_Home_Lifted, c("End_Month", "End_Day"))
+lockdowns$Start_Month <- na_if(lockdowns$Start_Month, "No")
+lockdowns$End_Month <- na_if(lockdowns$End_Month, "No")
+lockdowns$End_Month <- na_if(lockdowns$End_Month, "N")
+lockdowns$End_Day <- na_if(lockdowns$End_Day, "a")
+lockdowns$End_Day <- na_if(lockdowns$End_Day, "advisory")
+lockdowns$year <- 2020
+lockdowns$Start_Date <- as.Date(paste(lockdowns$year, lockdowns$Start_Month, lockdowns$Start_Day, sep = "-"),"%Y-%b-%d")
+lockdowns$End_Date <- as.Date(paste(lockdowns$year, lockdowns$End_Month, lockdowns$End_Day, sep = "-"),"%Y-%b-%d")
+lockdowns$SAH_Duration <- lockdowns$End_Date - lockdowns$Start_Date
+lockdown_clean <- lockdowns %>% select(c(State, SAH, Start_Date, End_Date, SAH_Duration))
+
+feline_intake <- c("Intake - Relinquished By Owner Total-Feline", 
+                   "Intake - Stray At Large Total-Feline", 
+                   "Intake - Transferred In Total-Feline", 
+                   "Intake - Owner Intended Euthanasia Total-Feline")
+canine_intake <- c("Intake - Relinquished By Owner Total-Canine",
+                   "Intake - Stray At Large Total-Canine",
+                   "Intake - Transferred In Total-Canine", 
+                   "Intake - Owner Intended Euthanasia Total-Canine",
+                   "Intakes - Other Intakes Total-Canine")
+
+adopt$feline_intake_total <- adopt$`Intake - Relinquished By Owner Total-Feline` + adopt$`Intake - Stray At Large Total-Feline` + adopt$`Intake - Transferred In Total-Feline` + adopt$`Intake - Owner Intended Euthanasia Total-Feline` + adopt$`Intakes - Other Intakes Total-Feline`
+adopt$canine_intake_total <- adopt$`Intake - Relinquished By Owner Total-Canine` + adopt$`Intake - Stray At Large Total-Canine` + adopt$`Intake - Transferred In Total-Canine` + adopt$`Intake - Owner Intended Euthanasia Total-Canine` + adopt$`Intakes - Other Intakes Total-Canine`
+adopt$intake_total <- adopt$feline_intake_total + adopt$canine_intake_total
+adopt$adoption_total <- adopt$`Live Outcome - Adoption Total-Feline` + adopt$`Live Outcome - Adoption Total-Canine`
+adopt_clean <- adopt %>% select(c(State, Year, feline_intake_total, canine_intake_total, intake_total, `Live Outcome - Adoption Total-Feline`, `Live Outcome - Adoption Total-Canine`, adoption_total))
+
+Sys.getenv("CENSUS_API_KEY")
+variables <- load_variables(2020, "pl", cache = FALSE)
+state_pop <- get_decennial(geography = "state", 
+              variables = c(population = "P1_001N"), 
+              year = 2020)
+```
+
+Plots
+
+Regression
+
+Text Analysis
+
+
+Shiny
