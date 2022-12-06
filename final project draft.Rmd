@@ -11,11 +11,16 @@ library(tidyverse)
 library(lubridate)
 library(rvest)
 library(tidycensus)
+library(tidytext)
+library(nametagger)
+library(udpipe)
+library(stargazer)
 ```
 
 Data
 ```{r}
 # code sources: for splitting date column: https://stackoverflow.com/questions/4078502/split-date-data-m-d-y-into-3-separate-columns
+# for updating state column IDs: https://stackoverflow.com/questions/53639594/how-to-use-mutate-to-add-column-with-state-names-based-on-the-state-abbreviation
 adopt <- read_csv("sac_aggregate_dataset_2019_2021.csv")
 covid <- read_csv("us-states-new.csv")
 covid$date <- as.Date(covid$date)
@@ -82,17 +87,98 @@ adopt$adoption_total <- adopt$`Live Outcome - Adoption Total-Feline` + adopt$`Li
 adopt_clean <- adopt %>% select(c(State, Year, feline_intake_total, canine_intake_total, intake_total, `Live Outcome - Adoption Total-Feline`, `Live Outcome - Adoption Total-Canine`, adoption_total))
 
 Sys.getenv("CENSUS_API_KEY")
-variables <- load_variables(2020, "pl", cache = FALSE)
+# variables <- load_variables(2020, "pl", cache = FALSE)
 state_pop <- get_decennial(geography = "state", 
               variables = c(population = "P1_001N"), 
               year = 2020)
+state_pop <- state_pop %>% rename(Population = value) %>%
+  select(c(NAME, Population))
+adopt_clean <- adopt_clean %>% 
+  mutate(State = state.name[match(State, state.abb)])
+
+data <- left_join(adopt_clean, covid_yr, by = c("State" = "state", "Year" = "year"))
+data <- left_join(data, state_pop, by = c("State" = "NAME"))
+data <- left_join(data, lockdown_clean, by = "State")
+# dropping US Territories and adding adoption rate and adoptions per capita
+data <- data %>% drop_na(State)
+data$adoption_rate <- data$adoption_total/data$intake_total
+data$adoption_percap <- data$adoption_total/data$Population
 ```
 
 Plots
+```{r}
+# pet adoptions per capita, adoptions vs. cases, adoptions vs. sah, cats v dogs on map
+ggplot(data2020, aes(SAH_Duration, adoption_total)) +
+  geom_point() +
+  geom_abline()
+
+ggplot(data_cases, aes(cases, adoption_total)) +
+  geom_point() +
+  geom_abline()
+
+state <- tolower(data$State)
+map <- map_data("state")
+ggplot(data, aes(fill = adoption_total)) +
+  geom_map(aes(map_id = state), map = map)
+```
 
 Regression
+```{r}
+data2020 <- data %>% filter(Year == 2020) %>%
+  mutate(across(SAH_Duration, ~ ifelse(is.na(.), 0, .)))
+data_cases <- data %>% filter(Year != 2019) %>%
+  mutate(across(cases, ~ ifelse(is.na(.), 0, .)))
+reg_adopt_cases <- lm(adoption_total ~ cases + Population, data = data_cases)
+stargazer(reg_adopt_cases, type = "text")
+reg_adoptrate_cases <- lm(adoption_rate ~ cases + Population, data = data_cases)
+stargazer(reg_adoptrate_cases, type = "text")
+reg_adopt_SAH <- lm(adoption_total ~ SAH_Duration + Population, data = data2020)
+stargazer(reg_adopt_SAH, type = "text")
+reg_adoptrate_SAH <- lm(adoption_rate ~ SAH_Duration + Population, data = data2020)
+stargazer(reg_adoptrate_SAH, type = "text")
+```
 
 Text Analysis
+```{r}
+sentiment_nrc <-   
+  get_sentiments("nrc") %>%
+  rename(nrc = sentiment)
 
+analyze_text <- function(url, css) {
+  request <- read_html(url)
+  article <- html_nodes(request, css)
+text_list <- html_text(article)
+text <- paste(text_list, collapse = "") %>% tibble(text = text_list)
+word_tokens_url <-     unnest_tokens(text, word_tokens,  text, token = "words")
+no_sw_df <- anti_join(word_tokens_url, stop_words, by = c("word_tokens" = "word"))
+no_sw_df_sent <- no_sw_df %>%
+  left_join(sentiment_nrc, by = c("word_tokens" = "word"))
+return(no_sw_df_sent)
+}
+
+i2020_aspca <- analyze_text("https://www.aspcapro.org/news/2020/06/10/over-570-groups-complete-7300-adoptions-during-aspca-national-adoption-weekend", ".post__body")
+m2020_nyt <- analyze_text("https://www.nytimes.com/2020/05/06/smarter-living/a-guide-for-first-time-pet-owners-during-the-pandemic.html?searchResultPosition=4",".StoryBodyCompanionColumn")
+i2021_dvm <- analyze_text("https://www.dvm360.com/view/making-dermatology-cases-more-efficient-in-general-practice", ".mt-3")
+i2021_aspca <- analyze_text("https://www.aspcapro.org/resource/new-aspca-survey-vast-majority-dogs-and-cats-acquired-during-pandemic-still-their-homes", ".paragraph--copy")
+m2021_sa <- analyze_text("https://www.scientificamerican.com/article/home-alone-the-fate-of-postpandemic-dogs/", "#sa_body > div.opinion-article__wrapper > section.flex-container.container.flex-direction--column-tablet > article")
+m2022_wapo <- analyze_text("https://www.washingtonpost.com/business/2022/01/07/covid-dogs-return-to-work/",".font-copy")
+# I was not able to scrape this site so I pulled the text instead
+#i2022_pfi <- analyze_text("https://www.petfoodindustry.com/articles/11748-pandemic-new-pet-boom-myth-busted-adoptions-lower-2021-22", "/html/body/div[5]/div[2]/div[1]/div[4]/div[1]")
+i2022_pfi <- read_file("petfoodindustry2022.txt")
+i2022_pfi_word <- tibble(text = i2022_pfi)
+i2022_pfi_word <-  unnest_tokens(i2022_pfi_word, word_tokens,  text, token = "words") 
+i2022_pfi <- anti_join(i2022_pfi_word, stop_words, by = c("word_tokens" = "word"))
+i2022_pfi <- i2022_pfi %>% left_join(sentiment_nrc, by = c("word_tokens" = "word"))
+
+
+count(m2020_nyt, nrc, sort = TRUE)
+count(i2020_aspca, nrc, sort = TRUE)
+count(i2021_dvm, nrc, sort = TRUE)
+count(i2021_aspca, nrc, sort = TRUE)
+count(m2021_sa, nrc, sort = TRUE)
+count(m2022_wapo, nrc, sort = TRUE)
+count(i2022_pfi, nrc, sort = TRUE)
+
+```
 
 Shiny
