@@ -1,12 +1,4 @@
----
-title: "final project draft"
-author: "Alex Gazzolo"
-date: "12/2/2022"
-output: html_document
----
-
-```{r setup, include=FALSE}
-knitr::opts_chunk$set(echo = TRUE)
+#File 1 of 3 - data sources and wrangling, static plots, and regression analysis
 library(tidyverse)
 library(lubridate)
 library(rvest)
@@ -15,19 +7,16 @@ library(tidytext)
 library(nametagger)
 library(udpipe)
 library(stargazer)
-```
 
-Data
-```{r}
 # code sources: for splitting date column: https://stackoverflow.com/questions/4078502/split-date-data-m-d-y-into-3-separate-columns
 # for updating state column IDs: https://stackoverflow.com/questions/53639594/how-to-use-mutate-to-add-column-with-state-names-based-on-the-state-abbreviation
 adopt <- read_csv("sac_aggregate_dataset_2019_2021.csv")
 covid <- read_csv("us-states-new.csv")
 covid$date <- as.Date(covid$date)
 covid <- covid %>% mutate(
-                 year = as.numeric(format(date, format = "%Y")),
-                 month = as.numeric(format(date, format = "%m")),
-                 day = as.numeric(format(date, format = "%d")))
+  year = as.numeric(format(date, format = "%Y")),
+  month = as.numeric(format(date, format = "%m")),
+  day = as.numeric(format(date, format = "%d")))
 covid_yr <- covid %>% group_by(state, year) %>% summarise(cases = sum(cases))
 url <- "https://en.wikipedia.org/wiki/U.S._state_and_local_government_responses_to_the_COVID-19_pandemic"
 request <- read_html(url)
@@ -48,13 +37,13 @@ colnames(lockdowns) <- c('State_del',
                          'Closures_Retail',
                          'Sources')
 lockdowns <- lockdowns %>% select(!c(State_del, 
-                        Gatherings, 
-                        Travel_Restrictions, 
-                        Closures_School,
-                        Closures_Daycare,
-                        Closures_Restaurants,
-                        Closures_Retail,
-                        Sources))
+                                     Gatherings, 
+                                     Travel_Restrictions, 
+                                     Closures_School,
+                                     Closures_Daycare,
+                                     Closures_Restaurants,
+                                     Closures_Retail,
+                                     Sources))
 lockdowns <- lockdowns %>% mutate(SAH = ifelse(Stay_At_Home_Ordered == 'No', 0, 1))
 lockdowns = lockdowns[-1,]
 lockdowns <- lockdowns %>% separate(Stay_At_Home_Ordered, c("Start_Month", "Start_Day")) 
@@ -79,7 +68,7 @@ canine_intake <- c("Intake - Relinquished By Owner Total-Canine",
                    "Intake - Transferred In Total-Canine", 
                    "Intake - Owner Intended Euthanasia Total-Canine",
                    "Intakes - Other Intakes Total-Canine")
-#create summary columns for adoption data set
+
 adopt$feline_intake_total <- adopt$`Intake - Relinquished By Owner Total-Feline` + adopt$`Intake - Stray At Large Total-Feline` + adopt$`Intake - Transferred In Total-Feline` + adopt$`Intake - Owner Intended Euthanasia Total-Feline` + adopt$`Intakes - Other Intakes Total-Feline`
 adopt$canine_intake_total <- adopt$`Intake - Relinquished By Owner Total-Canine` + adopt$`Intake - Stray At Large Total-Canine` + adopt$`Intake - Transferred In Total-Canine` + adopt$`Intake - Owner Intended Euthanasia Total-Canine` + adopt$`Intakes - Other Intakes Total-Canine`
 adopt$intake_total <- adopt$feline_intake_total + adopt$canine_intake_total
@@ -89,8 +78,8 @@ adopt_clean <- adopt %>% select(c(State, Year, feline_intake_total, canine_intak
 Sys.getenv("CENSUS_API_KEY")
 # variables <- load_variables(2020, "pl", cache = FALSE)
 state_pop <- get_decennial(geography = "state", 
-              variables = c(population = "P1_001N"), 
-              year = 2020)
+                           variables = c(population = "P1_001N"), 
+                           year = 2020)
 state_pop <- state_pop %>% rename(Population = value) %>%
   select(c(NAME, Population))
 adopt_clean <- adopt_clean %>% 
@@ -99,16 +88,14 @@ adopt_clean <- adopt_clean %>%
 data <- left_join(adopt_clean, covid_yr, by = c("State" = "state", "Year" = "year"))
 data <- left_join(data, state_pop, by = c("State" = "NAME"))
 data <- left_join(data, lockdown_clean, by = "State")
+
 # dropping US Territories and adding adoption rate and adoptions per capita
 data <- data %>% drop_na(State)
 data$adoption_rate <- data$adoption_total/data$intake_total
 data$adoption_percap <- data$adoption_total/data$Population
-write.csv(data, "data_clean.csv", row.names = FALSE)
-```
+write.csv(data, "~/Documents/Data & Programming II/data_skills_2_r_project/Data/data_clean.csv", row.names = FALSE)
 
-Plots
-```{r}
-
+#filtered data frames to simplify plotting
 data2020 <- data %>% filter(Year == 2020) %>%
   mutate(across(SAH_Duration, ~ ifelse(is.na(.), 0, .)))
 data_cases <- data %>% filter(Year != 2019) %>%
@@ -116,28 +103,28 @@ data_cases <- data %>% filter(Year != 2019) %>%
 
 ggplot(data2020, aes(SAH_Duration, adoption_percap)) +
   geom_point() +
-  geom_abline(color = "blue") +
+  geom_smooth(method = "lm", se = FALSE) +
   labs(title = "Duration of Stay-At-Home Orders and Adoptions Per Capita, 2020") +
   xlab("Duration of Stay-At-Home Orders, in days") +
   ylab("Pet Adoptions Per Capita")  
 
 ggplot(data2020, aes(SAH_Duration, adoption_rate)) +
   geom_point() +
-  geom_abline(color = "blue") +
+  geom_smooth(method = "lm", se = FALSE) +
   labs(title = "Duration of Stay-At-Home Orders and Pet Adoption Rate, 2020") +
   xlab("Duration of Stay-At-Home Orders, in days") +
   ylab("Pet Adoption Rate")
 
 ggplot(data_cases, aes(cases, adoption_percap)) +
   geom_point() +
-  geom_abline(color = "blue") +
+  geom_smooth(method = "lm", se = FALSE) +
   labs(title = "Number of COVID-19 Cases and Pet Adoptions Per Capita, 2020-2021") +
   xlab("Annual Number of COVID-19 Cases") +
   ylab("Pet Adoptions Per Capita")
 
 ggplot(data_cases, aes(cases, adoption_rate)) +
   geom_point() +
-  geom_abline(color = "blue") +
+  geom_smooth(method = "lm", se = FALSE) +
   labs(title = "Number of COVID-19 Cases and Pet Adoption Rate, 2020-2021") +
   xlab("Annual Number of COVID-19 Cases") +
   ylab("Pet Adoption Rate")
@@ -147,26 +134,23 @@ state <- tolower(data$State)
 map <- map_data("state")
 ggplot(data, aes(map_id = state)) +
   geom_map(aes(fill = adoption_rate), map = map) +
-   coord_sf(
-      crs = 5070, default_crs = 4326,
-      xlim = c(-125, -70), ylim = c(25, 52)
-    ) +
+  coord_sf(
+    crs = 5070, default_crs = 4326,
+    xlim = c(-125, -70), ylim = c(25, 52)
+  ) +
   facet_wrap(~Year) +
   labs(title = "Shelter Pet Adoption Rate in the US, 2019-2021")
 
 ggplot(data, aes(map_id = state)) +
   geom_map(aes(fill = adoption_percap), map = map) +
-   coord_sf(
-      crs = 5070, default_crs = 4326,
-      xlim = c(-125, -70), ylim = c(25, 52)
-    ) +
+  coord_sf(
+    crs = 5070, default_crs = 4326,
+    xlim = c(-125, -70), ylim = c(25, 52)
+  ) +
   facet_wrap(~Year) +
   labs(title = "Shelter Pet Adoption Per Capita in the US, 2019-2021")
 
-```
 
-Regressions
-```{r}
 reg_adopt_cases <- lm(adoption_total ~ cases + Population, data = data_cases)
 stargazer(reg_adopt_cases, type = "text")
 reg_adoptrate_cases <- lm(adoption_rate ~ cases + Population, data = data_cases)
@@ -175,6 +159,3 @@ reg_adopt_SAH <- lm(adoption_total ~ SAH_Duration + Population, data = data2020)
 stargazer(reg_adopt_SAH, type = "text")
 reg_adoptrate_SAH <- lm(adoption_rate ~ SAH_Duration + Population, data = data2020)
 stargazer(reg_adoptrate_SAH, type = "text")
-```
-
-
