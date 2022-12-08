@@ -5,6 +5,7 @@ library(tidytext)
 library(nametagger)
 library(udpipe)
 library(wordcloud2)
+library(wordcloud)
 library(shiny)
 library(plotly)
 library(scales)
@@ -79,7 +80,7 @@ nrc_wordcloud_data <- nrc_wordcloud_data %>% rename(n_21dvm = n)
 # https://statsandr.com/blog/draw-a-word-cloud-with-a-shiny-app/
 # https://shiny.rstudio.com/gallery/word-cloud.html
 # https://towardsdatascience.com/create-a-word-cloud-with-r-bde3e7422e8a
-wordcloud(words = nrc_wordcloud_data$nrc, freq = nrc_wordcloud_data$n_20nyt, 
+wordcloud(words = m2020_nyt_nrc$nrc, freq = m2020_nyt_nrc$n, 
           min.freq = 1,           
           max.words = 200, 
           random.order = FALSE, 
@@ -87,6 +88,6 @@ wordcloud(words = nrc_wordcloud_data$nrc, freq = nrc_wordcloud_data$n_20nyt,
           rot.per = 0,            
           colors = brewer.pal(11, "Spectral"))
 
-wordcloud2(nrc_wordcloud_data, 
+wordcloud2(m2020_nyt_nrc, 
            fontFamily = "sans",
            color = brewer.pal(11, "Spectral"))
